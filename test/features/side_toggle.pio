@@ -1,0 +1,7 @@
+; Mandatory 1-bit side-set on GPIO sideset_base; delay uses remaining 4 bits.
+.program side_toggle
+.side_set 1
+.wrap_target
+    nop side 1 [1]
+    nop side 0 [1]
+.wrap

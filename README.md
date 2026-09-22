@@ -40,3 +40,73 @@ The GitHub action will automatically build the ASIC files using [LibreLane](http
   - Mastodon [#tinytapeout](https://chaos.social/tags/tinytapeout) [@matthewvenn](https://chaos.social/@matthewvenn)
   - X (formerly Twitter) [#tinytapeout](https://twitter.com/hashtag/tinytapeout) [@tinytapeout](https://twitter.com/tinytapeout)
   - Bluesky [@tinytapeout.com](https://bsky.app/profile/tinytapeout.com)
+
+
+
+# KRAKEN IO PROCESSOR
+
+![alt text](docs/img/kraken.png "Mascot of io processor ip")
+
+## Design goal
+
+This is a small and open IO processor implementation that can use the Raspberry Pi *pioasm* compiler to generate small programs to run on Kraken.
+
+The goal is to have a small, portable and understandable learning project capable for ASIC and FPGA implementation.
+
+It should be easily possible to scale the numbers of PIOs to use.
+
+## Layout
+
+| Path | Contents |
+| --- | --- |
+| `pkg/` | SystemVerilog package: constants, opcodes, types (`kraken_pkg`) |
+| `src/` | SystemVerilog RTL modules |
+| `test/` | Per-testcase PIO software + pytest/cocotb (+ `test/mk` helpers) |
+
+## Tooling
+
+- **Simulator:** Cocotb + Verilator + [`cocotbext-axi`](https://github.com/alexforencich/cocotbext-axi) (AXI-Lite tests)
+- **Assembler:** Raspberry Pi `pioasm` ([pico-sdk-tools](https://github.com/raspberrypi/pico-sdk-tools/releases))
+
+Install tools from [pico-sdk-tools releases](https://github.com/raspberrypi/pico-sdk-tools/releases), e.g. under `/Applications/pico-sdk-tools/`, then:
+
+```bash
+export PATH="/Applications/pico-sdk-tools/pioasm:/Applications/pico-sdk-tools/picotool:/Applications/pico-sdk-tools/openocd-0:$PATH"
+pioasm --version
+```
+
+Python deps (venv):
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+
+Kraken simulation needs **pioasm** plus the venv packages above.
+
+## Build & test
+
+```bash
+make help
+make                    # assemble golden checks
+make TEST=hello_world
+make test-sim           # cocotb + Verilator (hello_world square wave)
+make clean
+```
+
+First testcases:
+- `test/hello_world/` — square wave (`SET` + delay)
+- `test/isa_basic/` — JMP, WAIT, IN/OUT, PUSH/PULL, MOV, IRQ
+- `test/features/` — side-set, FIFO join, STATUS, multi-SM host FIFOs
+- `test/axi_lite/` — AXI4-Lite CSR host (`kraken_axil`)
+- `test/clkdiv_axi/` — per-SM CLKDIV + EXEC/PIN banks (`NUM_SM=2`)
+- `test/uart_axi/` — UART TX over AXI (`pioasm` + TXF0 → gpio0 8N1)
+- `test/uart_rx_axi/` — UART RX over AXI (bit-bang gpio_in → RXF0)
+
+## Documentation pointers
+
+- **System architecture (SoC integration):** [`system_arch.md`](system_arch.md)
+- **Support matrix (what works / what’s missing):** [`kraken_support.md`](kraken_support.md)
+- Spec (encodings & target behavior): [`pio_derived_spec.md`](pio_derived_spec.md)
+- **AXI-Lite CSR map:** [`docs/axil_csr_map.md`](docs/axil_csr_map.md)
+- **Analog sidecar proposal:** [`kraken_analog_proposal.md`](kraken_analog_proposal.md)
+- https://www.raspberrypi.com/documentation/pico-sdk/hardware.html#group_hardware_pio

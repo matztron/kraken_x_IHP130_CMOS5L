@@ -1,0 +1,5 @@
+; Fill RX via push of null ISR (for FJOIN_RX depth check from host side).
+.program push_null
+.wrap_target
+    push
+.wrap

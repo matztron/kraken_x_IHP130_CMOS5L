@@ -1,0 +1,8 @@
+; JMP X-- countdown then light pin0
+.program jmp_count
+    set x, 2
+loop:
+    jmp x--, loop
+    set pins, 1
+hang:
+    jmp hang

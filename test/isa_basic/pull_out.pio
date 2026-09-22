@@ -1,0 +1,6 @@
+; PULL then OUT 32 bits to pins (host supplies TX word)
+.program pull_out
+    pull
+    out pins, 32
+hang:
+    jmp hang

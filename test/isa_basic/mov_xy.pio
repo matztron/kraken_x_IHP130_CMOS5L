@@ -1,0 +1,7 @@
+; MOV X->Y then SET pins from Y via OUT path using mov pins, y
+.program mov_xy
+    set x, 5
+    mov y, x
+    mov pins, y
+hang:
+    jmp hang

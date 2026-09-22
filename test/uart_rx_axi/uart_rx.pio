@@ -1,0 +1,14 @@
+; 8N1 UART RX — Pico uart_rx_mini style for Kraken over AXI.
+; IN/WAIT pin 0 = RX GPIO (in_base). Autopush threshold 8, shift right.
+; 8 SM cycles per bit → with CLKDIV=1, bit time = 8 sysclk.
+
+.program uart_rx
+
+.wrap_target
+    wait 0 pin 0        ; wait for start bit (falling edge / low)
+    set x, 7    [10]    ; preload bit count; delay to eye of first data bit
+bitloop:
+    in pins, 1          ; sample
+    jmp x-- bitloop [6] ; 8 cycles/bit (in + jmp[6])
+.wrap
+; autopush when 8 bits shifted (no explicit push)

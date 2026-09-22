@@ -1,0 +1,3 @@
+; MOV STATUS -> pins (out_count bits).
+.program mov_status
+    mov pins, status

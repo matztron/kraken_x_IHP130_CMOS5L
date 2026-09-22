@@ -1,0 +1,18 @@
+; Kraken IO hello world: 50% square wave on mapped SET pins.
+; Phase-0 bring-up program for IMEM load + pin toggle tests.
+;
+; Timing (clkdiv = 1): each instruction runs, then 1 delay cycle.
+;   SET 1 → idle → SET 0 → idle → wrap
+; so the pin is high for 2 cycles and low for 2 cycles (period 4).
+;
+; Host config for first HDL tests:
+;   - load at IMEM offset 0
+;   - wrap_target = 0, wrap = 1
+;   - SET_BASE = LED pin, SET_COUNT = 1
+;   - enable SM
+
+.program hello_world
+.wrap_target
+    set pins, 1 [1]
+    set pins, 0 [1]
+.wrap

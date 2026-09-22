@@ -1,43 +1,61 @@
-# Makefile
-# See https://docs.cocotb.org/en/stable/quickstart.html for more info
+# Run every testcase under test/<name>/
+#
+#   make -C test
+#   make -C test TEST=hello_world
 
-# defaults
-SIM ?= icarus
-FST ?= -fst # Use more efficient FST format
-TOPLEVEL_LANG ?= verilog
-SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v
+ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-ifneq ($(GATES),yes)
+include $(ROOT)/test/mk/pioasm.mk
+include $(ROOT)/test/mk/python.mk
 
-# RTL simulation:
-SIM_BUILD				= sim_build/rtl
-VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
-
+TEST_DIRS := $(wildcard $(ROOT)/test/*/Makefile)
+ifeq ($(TEST),)
+  RUN_DIRS := $(TEST_DIRS)
 else
-
-# Gate level simulation:
-SIM_BUILD				= sim_build/gl
-COMPILE_ARGS    += -DGL_TEST
-COMPILE_ARGS    += -DFUNCTIONAL
-COMPILE_ARGS    += -DSIM
-VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_io/verilog/sg13g2_io.v
-VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_stdcell/verilog/sg13g2_stdcell.v
-
-# this gets copied in by the GDS action workflow
-VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
-
+  RUN_DIRS := $(ROOT)/test/$(TEST)/Makefile
 endif
 
-# Allow sharing configuration between design and testbench via `include`:
-COMPILE_ARGS 		+= -I$(SRC_DIR)
+.PHONY: all test test-assemble test-sim clean help
 
-# Include the testbench sources:
-VERILOG_SOURCES += $(PWD)/tb.v
-TOPLEVEL = tb
+all: test
 
-# List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test
+help:
+	@echo "test/ targets:"
+	@echo "  make / make test     run all test/*/Makefiles"
+	@echo "  make TEST=name       run only test/<name>"
+	@echo "  make test-assemble   assemble + golden checks only"
+	@echo "  make test-sim        cocotb sims (per testcase)"
+	@echo "  make clean"
 
-# include cocotb's make rules to take care of the simulator setup
-include $(shell cocotb-config --makefiles)/Makefile.sim
+test: check
+	@for mk in $(RUN_DIRS); do \
+		dir=$$(dirname $$mk); \
+		echo "==> $$(basename $$dir)"; \
+		$(MAKE) -C $$dir test \
+			PIOASM=$(PIOASM) PYTHON=$(PYTHON) ROOT=$(ROOT) || exit 1; \
+	done
+
+test-assemble: check
+	@for mk in $(RUN_DIRS); do \
+		dir=$$(dirname $$mk); \
+		echo "==> $$(basename $$dir) assemble"; \
+		$(MAKE) -C $$dir assemble test \
+			PIOASM=$(PIOASM) PYTHON=$(PYTHON) ROOT=$(ROOT) || exit 1; \
+	done
+
+test-sim: check-python
+	@for mk in $(RUN_DIRS); do \
+		dir=$$(dirname $$mk); \
+		echo "==> $$(basename $$dir) sim"; \
+		$(MAKE) -C $$dir sim \
+			PIOASM=$(PIOASM) PYTHON=$(PYTHON) ROOT=$(ROOT) || exit 1; \
+	done
+
+check: check-pioasm check-python
+
+clean:
+	@for mk in $(TEST_DIRS); do \
+		$(MAKE) -C $$(dirname $$mk) clean; \
+	done
+	find $(ROOT)/test -type d -name sim_build -exec rm -rf {} + 2>/dev/null || true
+	find $(ROOT)/test -name results.xml -delete 2>/dev/null || true

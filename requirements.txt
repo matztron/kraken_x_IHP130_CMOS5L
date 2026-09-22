@@ -1,0 +1,5 @@
+# Python deps for Kraken IO simulation / assemble checks
+pytest>=7.0
+cocotb>=2.0
+cocotb-tools>=1.0
+cocotbext-axi>=0.1.28

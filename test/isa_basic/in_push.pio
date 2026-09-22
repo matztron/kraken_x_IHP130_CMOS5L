@@ -1,0 +1,6 @@
+; IN 32 from pins, PUSH to RX FIFO
+.program in_push
+    in pins, 32
+    push
+hang:
+    jmp hang

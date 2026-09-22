@@ -1,0 +1,4 @@
+; Pull then OUT 32 bits to pins — multi-SM FIFO independence.
+.program pull_out32
+    pull
+    out pins, 32

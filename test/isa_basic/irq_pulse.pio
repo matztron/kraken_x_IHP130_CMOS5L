@@ -1,0 +1,7 @@
+; Set IRQ0 then clear it (no wait) — host observes irq_flags
+.program irq_pulse
+    irq set 0
+    irq clear 0
+    set pins, 1
+hang:
+    jmp hang

@@ -1,0 +1,4 @@
+; Side-set wins over SET on the same pin (base 0).
+.program side_over_set
+.side_set 1
+    set pins, 1 side 0

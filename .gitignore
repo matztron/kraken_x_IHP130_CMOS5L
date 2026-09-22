@@ -11,3 +11,21 @@ test/sim_build
 test/__pycache__/
 test/results.xml
 test/gate_level_netlist.v
+
+docs/ref/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Simulation
+sim_build/
+*.vcd
+*.fst
+results.xml
+
+# Generated PIO binaries (per testcase)
+test/*/generated/

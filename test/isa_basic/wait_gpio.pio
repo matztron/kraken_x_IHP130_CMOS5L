@@ -1,0 +1,6 @@
+; WAIT for gpio0==1 then set pin1
+.program wait_gpio
+    wait 1 gpio 0
+    set pins, 1
+hang:
+    jmp hang

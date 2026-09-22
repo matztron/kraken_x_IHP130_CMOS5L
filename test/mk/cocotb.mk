@@ -9,6 +9,11 @@ SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 WAVES ?= 0
 
+# This machine keeps Verilator in oss-cad-suite, which is not always on PATH.
+ifneq ($(wildcard /Applications/oss-cad-suite/bin/verilator),)
+  export PATH := /Applications/oss-cad-suite/bin:$(PATH)
+endif
+
 export SIM TOPLEVEL_LANG
 
 COCOTB_MAKEFILES := $(shell $(PYTHON) -c "import cocotb_tools, pathlib; print(pathlib.Path(cocotb_tools.__file__).resolve().parent / 'makefiles')" 2>/dev/null)
@@ -39,6 +44,12 @@ export PYTHONPATH := $(ROOT)/test:$(PYTHONPATH)
 .PHONY: cocotb-sim
 
 cocotb-sim:
+	rm -rf "$(TEST_DIR)/sim_build"
+	@command -v verilator >/dev/null 2>&1 || { \
+		echo "error: verilator not on PATH"; \
+		echo "  install oss-cad-suite, or export PATH to its bin directory"; \
+		exit 1; \
+	}
 ifeq ($(COCOTB_MAKEFILES),)
 	$(error cocotb makefiles not found; pip install cocotb in $(PYTHON))
 endif

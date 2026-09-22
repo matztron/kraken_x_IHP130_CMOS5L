@@ -20,7 +20,7 @@ export PYTHON
 check-python:
 	@$(PYTHON) -c "import pytest" 2>/dev/null || { \
 		echo "error: pytest not available for $(PYTHON)"; \
-		echo "  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"; \
+		echo "  python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt"; \
 		exit 1; \
 	}
 	@$(PYTHON) -c "import cocotbext.axi" 2>/dev/null || { \

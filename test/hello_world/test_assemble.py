@@ -22,13 +22,13 @@ def _find_pioasm() -> str:
     env = os.environ.get("PIOASM")
     if env:
         return env
+    local = ROOT / "submodules" / "pioasm-x" / "build" / "pioasm"
+    if local.is_file():
+        return str(local)
     found = shutil.which("pioasm")
     if found:
         return found
-    mac_default = Path("/Applications/pico-sdk-tools/pioasm/pioasm")
-    if mac_default.is_file():
-        return str(mac_default)
-    pytest.skip("pioasm not found (set PATH or PIOASM)")
+    pytest.skip("pioasm not found (build submodules/pioasm-x or set PIOASM)")
 
 
 def _parse_hex(path: Path) -> list[int]:

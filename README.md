@@ -59,29 +59,21 @@ It should be easily possible to scale the numbers of PIOs to use.
 
 | Path | Contents |
 | --- | --- |
-| `pkg/` | SystemVerilog package: constants, opcodes, types (`kraken_pkg`) |
-| `src/` | SystemVerilog RTL modules |
+| `src/` | SystemVerilog RTL, including `kraken_pkg` and the TinyTapeout top `project.v` |
 | `test/` | Per-testcase PIO software + pytest/cocotb (+ `test/mk` helpers) |
 
 ## Tooling
 
-- **Simulator:** Cocotb + Verilator + [`cocotbext-axi`](https://github.com/alexforencich/cocotbext-axi) (AXI-Lite tests)
-- **Assembler:** Raspberry Pi `pioasm` ([pico-sdk-tools](https://github.com/raspberrypi/pico-sdk-tools/releases))
-
-Install tools from [pico-sdk-tools releases](https://github.com/raspberrypi/pico-sdk-tools/releases), e.g. under `/Applications/pico-sdk-tools/`, then:
-
-```bash
-export PATH="/Applications/pico-sdk-tools/pioasm:/Applications/pico-sdk-tools/picotool:/Applications/pico-sdk-tools/openocd-0:$PATH"
-pioasm --version
-```
+- **Simulator:** Cocotb + Verilator + [`cocotbext-axi`](https://github.com/alexforencich/cocotbext-axi). Verilator is taken from [oss-cad-suite](https://github.com/YosysHQ/oss-cad-suite-build) when `/Applications/oss-cad-suite/bin` exists.
+- **Assembler:** `submodules/pioasm-x`, built by the test Makefiles
 
 Python deps (venv):
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
-Kraken simulation needs **pioasm** plus the venv packages above.
+Kraken simulation builds **pioasm** from `submodules/pioasm-x` and uses the venv packages above.
 
 ## Build & test
 
@@ -101,6 +93,7 @@ First testcases:
 - `test/clkdiv_axi/` — per-SM CLKDIV + EXEC/PIN banks (`NUM_SM=2`)
 - `test/uart_axi/` — UART TX over AXI (`pioasm` + TXF0 → gpio0 8N1)
 - `test/uart_rx_axi/` — UART RX over AXI (bit-bang gpio_in → RXF0)
+- `test/tt_top/` — TinyTapeout top (`project.v`): pin host loads `hello_world.pio` and checks gpio0
 
 ## Documentation pointers
 

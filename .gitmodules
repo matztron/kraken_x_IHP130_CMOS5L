@@ -1,0 +1,3 @@
+[submodule "submodules/pioasm-x"]
+	path = submodules/pioasm-x
+	url = git@github.com:matztron/pioasm-x.git

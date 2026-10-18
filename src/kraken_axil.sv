@@ -168,16 +168,17 @@ module kraken_axil
   function automatic logic [31:0] merge_wstrb(
       input logic [31:0] prev, input logic [31:0] wdata, input logic [3:0] wstrb
   );
-    logic [31:0] r = prev;
+    logic [31:0] r;
+    r = prev;
     if (wstrb[0]) r[7:0]   = wdata[7:0];
     if (wstrb[1]) r[15:8]  = wdata[15:8];
     if (wstrb[2]) r[23:16] = wdata[23:16];
     if (wstrb[3]) r[31:24] = wdata[31:24];
-    return r;
+    merge_wstrb = r;
   endfunction
 
   function automatic logic [31:0] a32(input logic [ADDR_W-1:0] a);
-    return {{(32-ADDR_W){1'b0}}, a} & 32'h0000_0FFC;
+    a32 = {{(32-ADDR_W){1'b0}}, a} & 32'h0000_0FFC;
   endfunction
 
   logic [31:0] fstat_word, fdebug_word, flevel_word, ctrl_rd;

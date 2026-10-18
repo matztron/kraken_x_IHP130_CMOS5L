@@ -231,13 +231,14 @@ module kraken_sm
       idx = in_base + i[4:0];
       b[i] = gpio_in[idx];
     end
-    return b;
+    pins_bus = b;
   endfunction
 
   function automatic logic [2:0] irq_idx_f(input logic [4:0] raw);
-    logic [2:0] idx = raw[2:0];
+    logic [2:0] idx;
+    idx = raw[2:0];
     if (raw[4]) idx[1:0] = idx[1:0] + sm_id;
-    return idx;
+    irq_idx_f = idx;
   endfunction
 
   // --------------------------------------------------------------------------

@@ -243,18 +243,10 @@ module kraken_pins (
 	endfunction
 	function automatic [31:0] mask_n;
 		input reg [5:0] n;
-		reg [0:1] _sv2v_jump;
-		begin
-			_sv2v_jump = 2'b00;
-			if (n >= 6'd32) begin
-				mask_n = {kraken_pkg_GPIO_W {1'b1}};
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
-				mask_n = sv2v_cast_6917B((32'b00000000000000000000000000000001 << n) - 32'b00000000000000000000000000000001);
-				_sv2v_jump = 2'b11;
-			end
-		end
+		if (n >= 6'd32)
+			mask_n = {kraken_pkg_GPIO_W {1'b1}};
+		else
+			mask_n = sv2v_cast_6917B((32'b00000000000000000000000000000001 << n) - 32'b00000000000000000000000000000001);
 	endfunction
 	function automatic [31:0] apply_field;
 		input reg [31:0] cur;
@@ -264,19 +256,12 @@ module kraken_pins (
 		input reg [31:0] value;
 		reg [31:0] m;
 		reg [31:0] v;
-		reg [0:1] _sv2v_jump;
-		begin
-			_sv2v_jump = 2'b00;
-			if (!enable || (count == 6'd0)) begin
-				apply_field = cur;
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
-				m = mask_n(count) << base;
-				v = sv2v_cast_6917B(value) << base;
-				apply_field = (cur & ~m) | (v & m);
-				_sv2v_jump = 2'b11;
-			end
+		if (!enable || (count == 6'd0))
+			apply_field = cur;
+		else begin
+			m = mask_n(count) << base;
+			v = sv2v_cast_6917B(value) << base;
+			apply_field = (cur & ~m) | (v & m);
 		end
 	endfunction
 	function automatic [31:0] sv2v_cast_6778B;
@@ -602,24 +587,14 @@ module kraken_sm (
 		input reg [2:0] sideset_count;
 		input reg side_en;
 		reg [2:0] dw;
-		reg [0:1] _sv2v_jump;
-		begin
-			_sv2v_jump = 2'b00;
-			if (sideset_count == 3'd0) begin
-				kraken_pkg_delay_from_sideset_field = field;
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
-				dw = (side_en ? sv2v_cast_3(4 - sideset_count) : sv2v_cast_3(5 - sideset_count));
-				if (dw == 3'd0) begin
-					kraken_pkg_delay_from_sideset_field = 5'd0;
-					_sv2v_jump = 2'b11;
-				end
-				if (_sv2v_jump == 2'b00) begin
-					kraken_pkg_delay_from_sideset_field = field & ((5'd1 << dw) - 5'd1);
-					_sv2v_jump = 2'b11;
-				end
-			end
+		if (sideset_count == 3'd0)
+			kraken_pkg_delay_from_sideset_field = field;
+		else begin
+			dw = (side_en ? sv2v_cast_3(4 - sideset_count) : sv2v_cast_3(5 - sideset_count));
+			if (dw == 3'd0)
+				kraken_pkg_delay_from_sideset_field = 5'd0;
+			else
+				kraken_pkg_delay_from_sideset_field = field & ((5'd1 << dw) - 5'd1);
 		end
 	endfunction
 	assign instr_delay = kraken_pkg_delay_from_sideset_field(dec[14-:5], sideset_count, side_en);
@@ -627,24 +602,12 @@ module kraken_sm (
 		input reg [4:0] field;
 		input reg [2:0] sideset_count;
 		input reg side_en;
-		reg [0:1] _sv2v_jump;
-		begin
-			_sv2v_jump = 2'b00;
-			if (sideset_count == 3'd0) begin
-				kraken_pkg_side_valid_from_field = 1'b0;
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
-				if (side_en) begin
-					kraken_pkg_side_valid_from_field = field[4];
-					_sv2v_jump = 2'b11;
-				end
-				if (_sv2v_jump == 2'b00) begin
-					kraken_pkg_side_valid_from_field = 1'b1;
-					_sv2v_jump = 2'b11;
-				end
-			end
-		end
+		if (sideset_count == 3'd0)
+			kraken_pkg_side_valid_from_field = 1'b0;
+		else if (side_en)
+			kraken_pkg_side_valid_from_field = field[4];
+		else
+			kraken_pkg_side_valid_from_field = 1'b1;
 	endfunction
 	assign do_side = kraken_pkg_side_valid_from_field(dec[14-:5], sideset_count, side_en);
 	function automatic [4:0] kraken_pkg_side_data_from_field;
@@ -653,24 +616,16 @@ module kraken_sm (
 		input reg side_en;
 		reg [2:0] s;
 		reg [4:0] mask;
-		reg [0:1] _sv2v_jump;
 		begin
-			_sv2v_jump = 2'b00;
 			s = sideset_count;
-			if (s == 3'd0) begin
+			if (s == 3'd0)
 				kraken_pkg_side_data_from_field = 5'd0;
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
+			else begin
 				mask = (5'd1 << s) - 5'd1;
-				if (side_en) begin
+				if (side_en)
 					kraken_pkg_side_data_from_field = (field >> (4 - s)) & mask;
-					_sv2v_jump = 2'b11;
-				end
-				if (_sv2v_jump == 2'b00) begin
+				else
 					kraken_pkg_side_data_from_field = (field >> (5 - s)) & mask;
-					_sv2v_jump = 2'b11;
-				end
 			end
 		end
 	endfunction
@@ -921,70 +876,34 @@ module kraken_sm (
 		input reg [31:0] bits;
 		input reg [5:0] n;
 		input reg shift_right;
-		reg [0:1] _sv2v_jump;
-		begin
-			_sv2v_jump = 2'b00;
-			if (n >= 6'd32) begin
-				kraken_pkg_isr_shift_in = bits;
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
-				if (shift_right) begin
-					kraken_pkg_isr_shift_in = (isr >> n) | (bits << (32 - n));
-					_sv2v_jump = 2'b11;
-				end
-				if (_sv2v_jump == 2'b00) begin
-					kraken_pkg_isr_shift_in = (isr << n) | (bits & ((sv2v_cast_6778B(1) << n) - 1));
-					_sv2v_jump = 2'b11;
-				end
-			end
-		end
+		if (n >= 6'd32)
+			kraken_pkg_isr_shift_in = bits;
+		else if (shift_right)
+			kraken_pkg_isr_shift_in = (isr >> n) | (bits << (32 - n));
+		else
+			kraken_pkg_isr_shift_in = (isr << n) | (bits & ((sv2v_cast_6778B(1) << n) - 1));
 	endfunction
 	function automatic [31:0] kraken_pkg_osr_shifted;
 		input reg [31:0] osr;
 		input reg [5:0] n;
 		input reg shift_right;
-		reg [0:1] _sv2v_jump;
-		begin
-			_sv2v_jump = 2'b00;
-			if (n >= 6'd32) begin
-				kraken_pkg_osr_shifted = 1'sb0;
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
-				if (shift_right) begin
-					kraken_pkg_osr_shifted = osr >> n;
-					_sv2v_jump = 2'b11;
-				end
-				if (_sv2v_jump == 2'b00) begin
-					kraken_pkg_osr_shifted = osr << n;
-					_sv2v_jump = 2'b11;
-				end
-			end
-		end
+		if (n >= 6'd32)
+			kraken_pkg_osr_shifted = 1'sb0;
+		else if (shift_right)
+			kraken_pkg_osr_shifted = osr >> n;
+		else
+			kraken_pkg_osr_shifted = osr << n;
 	endfunction
 	function automatic [31:0] kraken_pkg_osr_take;
 		input reg [31:0] osr;
 		input reg [5:0] n;
 		input reg shift_right;
-		reg [0:1] _sv2v_jump;
-		begin
-			_sv2v_jump = 2'b00;
-			if (n >= 6'd32) begin
-				kraken_pkg_osr_take = osr;
-				_sv2v_jump = 2'b11;
-			end
-			if (_sv2v_jump == 2'b00) begin
-				if (shift_right) begin
-					kraken_pkg_osr_take = osr & ((sv2v_cast_6778B(1) << n) - 1);
-					_sv2v_jump = 2'b11;
-				end
-				if (_sv2v_jump == 2'b00) begin
-					kraken_pkg_osr_take = osr >> (32 - n);
-					_sv2v_jump = 2'b11;
-				end
-			end
-		end
+		if (n >= 6'd32)
+			kraken_pkg_osr_take = osr;
+		else if (shift_right)
+			kraken_pkg_osr_take = osr & ((sv2v_cast_6778B(1) << n) - 1);
+		else
+			kraken_pkg_osr_take = osr >> (32 - n);
 	endfunction
 	function automatic [4:0] sv2v_cast_AFD83;
 		input reg [4:0] inp;

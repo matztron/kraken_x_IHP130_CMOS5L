@@ -127,12 +127,14 @@ package kraken_pkg;
     d.arg2          = instr[4:0];
     d.is_pull       = instr[7];
     d.valid         = 1'b1;
-    return d;
+    decode_instr = d;
   endfunction
 
   // Delay field with no side-set: bits are delay 0..31.
+  // Prefer `fname = expr` over `return` so sv2v does not emit a jump FSM
+  // that Yosys check reports as undriven `$result` bits.
   function automatic logic [DELAY_W-1:0] delay_from_field(logic [DELAY_W-1:0] field);
-    return field;
+    delay_from_field = field;
   endfunction
 
   // Delay bits remaining after side-set occupies MSBs of [12:8].
@@ -144,10 +146,15 @@ package kraken_pkg;
       input logic               side_en
   );
     logic [2:0] dw;
-    if (sideset_count == 3'd0) return field;
-    dw = side_en ? 3'(4 - sideset_count) : 3'(5 - sideset_count);
-    if (dw == 3'd0) return 5'd0;
-    return field & ((5'd1 << dw) - 5'd1);
+    if (sideset_count == 3'd0) begin
+      delay_from_sideset_field = field;
+    end else begin
+      dw = side_en ? 3'(4 - sideset_count) : 3'(5 - sideset_count);
+      if (dw == 3'd0)
+        delay_from_sideset_field = 5'd0;
+      else
+        delay_from_sideset_field = field & ((5'd1 << dw) - 5'd1);
+    end
   endfunction
 
   function automatic logic side_valid_from_field(
@@ -155,9 +162,12 @@ package kraken_pkg;
       input logic [2:0]         sideset_count,
       input logic               side_en
   );
-    if (sideset_count == 3'd0) return 1'b0;
-    if (side_en) return field[4];
-    return 1'b1;
+    if (sideset_count == 3'd0)
+      side_valid_from_field = 1'b0;
+    else if (side_en)
+      side_valid_from_field = field[4];
+    else
+      side_valid_from_field = 1'b1;
   endfunction
 
   function automatic logic [4:0] side_data_from_field(
@@ -168,26 +178,31 @@ package kraken_pkg;
     logic [2:0] s;
     logic [4:0] mask;
     s = sideset_count;
-    if (s == 3'd0) return 5'd0;
-    mask = (5'd1 << s) - 5'd1;
-    if (side_en) return (field >> (4 - s)) & mask;
-    return (field >> (5 - s)) & mask;
+    if (s == 3'd0) begin
+      side_data_from_field = 5'd0;
+    end else begin
+      mask = (5'd1 << s) - 5'd1;
+      if (side_en)
+        side_data_from_field = (field >> (4 - s)) & mask;
+      else
+        side_data_from_field = (field >> (5 - s)) & mask;
+    end
   endfunction
 
   // Bit-count field: encoded 0 means 32.
   function automatic logic [5:0] bit_count_decode(logic [ARG2_W-1:0] raw);
-    return (raw == '0) ? 6'd32 : {1'b0, raw};
+    bit_count_decode = (raw == '0) ? 6'd32 : {1'b0, raw};
   endfunction
 
   // Threshold field: 0 means 32.
   function automatic logic [5:0] thresh_decode(logic [4:0] raw);
-    return (raw == '0) ? 6'd32 : {1'b0, raw};
+    thresh_decode = (raw == '0) ? 6'd32 : {1'b0, raw};
   endfunction
 
   function automatic data_t bit_reverse32(data_t v);
     data_t r;
     for (int i = 0; i < 32; i++) r[i] = v[31-i];
-    return r;
+    bit_reverse32 = r;
   endfunction
 
   // Shift `n` bits into ISR (right: insert at MSB side; left: at LSB side).
@@ -197,9 +212,12 @@ package kraken_pkg;
       input logic [5:0] n,
       input logic shift_right
   );
-    if (n >= 6'd32) return bits;
-    if (shift_right) return (isr >> n) | (bits << (32 - n));
-    return (isr << n) | (bits & ((data_t'(1) << n) - 1));
+    if (n >= 6'd32)
+      isr_shift_in = bits;
+    else if (shift_right)
+      isr_shift_in = (isr >> n) | (bits << (32 - n));
+    else
+      isr_shift_in = (isr << n) | (bits & ((data_t'(1) << n) - 1));
   endfunction
 
   function automatic data_t osr_take(
@@ -207,9 +225,12 @@ package kraken_pkg;
       input logic [5:0] n,
       input logic shift_right
   );
-    if (n >= 6'd32) return osr;
-    if (shift_right) return osr & ((data_t'(1) << n) - 1);
-    return osr >> (32 - n);
+    if (n >= 6'd32)
+      osr_take = osr;
+    else if (shift_right)
+      osr_take = osr & ((data_t'(1) << n) - 1);
+    else
+      osr_take = osr >> (32 - n);
   endfunction
 
   function automatic data_t osr_shifted(
@@ -217,9 +238,12 @@ package kraken_pkg;
       input logic [5:0] n,
       input logic shift_right
   );
-    if (n >= 6'd32) return '0;
-    if (shift_right) return osr >> n;
-    return osr << n;
+    if (n >= 6'd32)
+      osr_shifted = '0;
+    else if (shift_right)
+      osr_shifted = osr >> n;
+    else
+      osr_shifted = osr << n;
   endfunction
 
   // ---------------------------------------------------------------------------
@@ -262,35 +286,35 @@ package kraken_pkg;
 
   // Pico-compatible CLKDIV pack: INT[31:16], FRAC[15:8]
   function automatic logic [31:0] axil_pack_clkdiv(input logic [15:0] div_int, input logic [7:0] div_frac);
-    return {div_int, div_frac, 8'b0};
+    axil_pack_clkdiv = {div_int, div_frac, 8'b0};
   endfunction
 
   function automatic logic [31:0] axil_addr_sm(input int unsigned sm, input logic [31:0] offset);
-    return AXIL_ADDR_SM_BASE + (AXIL_ADDR_SM_STRIDE * 32'(sm)) + offset;
+    axil_addr_sm = AXIL_ADDR_SM_BASE + (AXIL_ADDR_SM_STRIDE * 32'(sm)) + offset;
   endfunction
 
   function automatic logic [31:0] axil_addr_clkdiv(input int unsigned sm);
-    return axil_addr_sm(sm, 32'h0);
+    axil_addr_clkdiv = axil_addr_sm(sm, 32'h0);
   endfunction
 
   function automatic logic [31:0] axil_addr_execctrl(input int unsigned sm);
-    return axil_addr_sm(sm, 32'h4);
+    axil_addr_execctrl = axil_addr_sm(sm, 32'h4);
   endfunction
 
   function automatic logic [31:0] axil_addr_shiftctrl(input int unsigned sm);
-    return axil_addr_sm(sm, 32'h8);
+    axil_addr_shiftctrl = axil_addr_sm(sm, 32'h8);
   endfunction
 
   function automatic logic [31:0] axil_addr_pinctrl(input int unsigned sm);
-    return axil_addr_sm(sm, 32'hC);
+    axil_addr_pinctrl = axil_addr_sm(sm, 32'hC);
   endfunction
 
   function automatic logic [31:0] axil_addr_sm_instr(input int unsigned sm);
-    return axil_addr_sm(sm, 32'h10);
+    axil_addr_sm_instr = axil_addr_sm(sm, 32'h10);
   endfunction
 
   function automatic logic [31:0] axil_addr_sm_addr(input int unsigned sm);
-    return axil_addr_sm(sm, 32'h14);
+    axil_addr_sm_addr = axil_addr_sm(sm, 32'h14);
   endfunction
 
 endpackage

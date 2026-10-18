@@ -21,8 +21,15 @@ module kraken_regfile
   output data_t  isr,
   output data_t  osr
 );
+  // Keep async reset and SM_RESTART clear as separate branches: Yosys rejects
+  // `if (!rst_n || clear)` inside `always @(posedge clk or negedge rst_n)`.
   always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n || clear) begin
+    if (!rst_n) begin
+      x   <= '0;
+      y   <= '0;
+      isr <= '0;
+      osr <= '0;
+    end else if (clear) begin
       x   <= '0;
       y   <= '0;
       isr <= '0;

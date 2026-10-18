@@ -368,12 +368,19 @@ module kraken_axil
             irq_force_sticky <= irq_force_sticky & ~wr_data[NUM_IRQ-1:0];
           AXIL_ADDR_IRQ_FORCE:
             irq_force_sticky <= irq_force_sticky | wr_data[NUM_IRQ-1:0];
-          AXIL_ADDR_IMEM_ADDR:
-            imem_addr_r <= merge_wstrb({27'b0, imem_addr_r}, wr_data, wr_strb)[4:0];
+          AXIL_ADDR_IMEM_ADDR: begin
+            // Temp required: Yosys rejects part-selects on function call results
+            // (also after sv2v). Same pattern below for IMEM_DATA / SM_INSTR.
+            logic [31:0] v_imem_addr;
+            v_imem_addr = merge_wstrb({27'b0, imem_addr_r}, wr_data, wr_strb);
+            imem_addr_r <= v_imem_addr[4:0];
+          end
           AXIL_ADDR_IMEM_DATA: begin
+            logic [31:0] v_imem_data;
+            v_imem_data  = merge_wstrb(32'b0, wr_data, wr_strb);
             imem_wr_en   <= 1'b1;
             imem_wr_addr <= imem_addr_r;
-            imem_wr_data <= merge_wstrb('0, wr_data, wr_strb)[15:0];
+            imem_wr_data <= v_imem_data[15:0];
             imem_addr_r  <= imem_addr_r + 5'd1;
           end
           AXIL_ADDR_FDEBUG: ; // sticky clear handled above
@@ -388,8 +395,10 @@ module kraken_axil
               if (a32(wr_addr) == axil_addr_pinctrl(s))
                 pinctrl[s] <= merge_wstrb(pinctrl[s], wr_data, wr_strb);
               if (a32(wr_addr) == axil_addr_sm_instr(s)) begin
-                sm_instr_hold[s] <= merge_wstrb({16'b0, sm_instr_hold[s]}, wr_data, wr_strb)[15:0];
-                host_exec_instr[16*s +: 16] <= merge_wstrb({16'b0, sm_instr_hold[s]}, wr_data, wr_strb)[15:0];
+                logic [31:0] v_instr;
+                v_instr = merge_wstrb({16'b0, sm_instr_hold[s]}, wr_data, wr_strb);
+                sm_instr_hold[s] <= v_instr[15:0];
+                host_exec_instr[16*s +: 16] <= v_instr[15:0];
                 host_exec_stb[s] <= 1'b1;
               end
               if (a32(wr_addr) == (AXIL_ADDR_TXF0 + (32'(s) << 3))) begin

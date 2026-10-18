@@ -224,7 +224,13 @@ module kraken_sm
 
   function automatic data_t pins_bus();
     data_t b;
-    for (int i = 0; i < 32; i++) b[i] = gpio_in[5'(in_base + 5'(i))];
+    // Avoid cast-expressions inside bit-selects: Yosys (via sv2v) rejects
+    // non-constant function calls used as part-select indices.
+    for (int i = 0; i < 32; i++) begin
+      logic [4:0] idx;
+      idx = in_base + i[4:0];
+      b[i] = gpio_in[idx];
+    end
     return b;
   endfunction
 
@@ -285,7 +291,11 @@ module kraken_sm
         OPC_WAIT: begin
           unique case (wait_src_e'(dec.arg1[1:0]))
             WAIT_GPIO: stall = (gpio_in[dec.arg2] != dec.arg1[2]);
-            WAIT_PIN:  stall = (gpio_in[5'(in_base + dec.arg2)] != dec.arg1[2]);
+            WAIT_PIN: begin
+              logic [4:0] wait_pin_idx;
+              wait_pin_idx = in_base + dec.arg2;
+              stall = (gpio_in[wait_pin_idx] != dec.arg1[2]);
+            end
             WAIT_IRQ:  stall = (irq_flags[iidx] != dec.arg1[2]);
             default: ;
           endcase

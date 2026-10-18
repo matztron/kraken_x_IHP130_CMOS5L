@@ -21,5 +21,6 @@ Single-cycle-style PIO state machine. Shared constants live in `kraken_pkg.sv`.
 | `kraken_serial_host.sv` | Synchronous 2-wire host link (SCK + SDIO) |
 | `kraken_tt_host.sv` | TinyTapeout pad wiring around `kraken_axil` |
 | `project.v` | Tapeout top `tt_um_kraken_x_protocol_emulator` |
+| `tt_bundle.v` | **Generated** Yosys/TT flatten of the above (`scripts/gen_tt_verilog.sh`) |
 
 Phase-1 ISA: `JMP`, `WAIT`, `IN`, `OUT`, `PUSH`/`PULL`, `MOV`, `IRQ`, `SET` (+ delay/wrap).

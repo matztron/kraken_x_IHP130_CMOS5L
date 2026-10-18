@@ -13,6 +13,20 @@ jobs:
         with:
           submodules: recursive
 
+      # Yosys's SV frontend cannot parse our packages (`return`, `import`, …).
+      # Regenerate the committed Verilog bundle so hardening always matches .sv.
+      - name: Install sv2v
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/sv2v.zip \
+            "https://github.com/zachjs/sv2v/releases/download/v0.0.13/sv2v-Linux.zip"
+          sudo unzip -o /tmp/sv2v.zip -d /tmp
+          sudo install -m 755 /tmp/sv2v-Linux/sv2v /usr/local/bin/sv2v
+          sv2v --version
+
+      - name: Generate tt_bundle.v for Yosys
+        run: ./scripts/gen_tt_verilog.sh
+
       - name: Build GDS
         uses: TinyTapeout/tt-gds-action@ttihp26b
         with:

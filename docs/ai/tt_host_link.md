@@ -3,6 +3,19 @@
 **RTL:** `src/kraken_tt_host.sv` (pads) · `src/kraken_serial_host.sv` (link) · `src/kraken_sync2.sv` (input sync)
 **Driver:** `test/lib/tt_serial.py`
 
+## 0. Hardening / Yosys
+
+Tiny Tapeout's GDS path reads Yosys's limited SystemVerilog frontend. Our `.sv`
+sources use packages with `return`, `import kraken_pkg::*`, unpacked array ports,
+and other constructs that frontend rejects (first failure was
+`kraken_pkg.sv:130` → `return d`).
+
+- **Source of truth for behaviour:** `src/*.sv` (cocotb via `test/filelist.f`)
+- **What `info.yaml` hardens:** `src/tt_bundle.v`, produced by
+  `scripts/gen_tt_verilog.sh` (`sv2v` flatten). The GDS workflow regenerates it
+  on every run; regenerate locally the same way after RTL edits
+  (`brew install sv2v` on macOS).
+
 TinyTapeout provides 8 dedicated inputs, 8 dedicated outputs, and 8 bidirectional
 pins, and that count does not grow with tile area. Two pins carry a synchronous
 host link; the remaining 22 belong to the PIO.

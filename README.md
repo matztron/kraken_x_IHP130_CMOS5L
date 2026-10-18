@@ -100,7 +100,7 @@ First testcases:
 
 ## Documentation pointers
 
-- **TinyTapeout pin map + host link:** [`docs/tt_host_link.md`](docs/tt_host_link.md)
+- **TinyTapeout pin map + host link:** [`docs/ai/tt_host_link.md`](docs/ai/tt_host_link.md)
 - **System architecture (SoC integration):** [`system_arch.md`](system_arch.md)
 - **Support matrix (what works / what’s missing):** [`kraken_support.md`](kraken_support.md)
 - Spec (encodings & target behavior): [`pio_derived_spec.md`](pio_derived_spec.md)

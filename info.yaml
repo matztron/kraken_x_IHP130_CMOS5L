@@ -4,7 +4,9 @@ project:
   author:       "Matthias Musch"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "Protocol emulator"      # One line description of what your project does
-  language:     "SystemVerilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
+  # Hardening uses a Yosys-friendly Verilog bundle. Edit the .sv sources and run
+  # `scripts/gen_tt_verilog.sh` (see docs/ai/tt_host_link.md). Cocotb still sims the .sv.
+  language:     "Verilog"
   clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
@@ -17,23 +19,7 @@ project:
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
-    - "kraken_pkg.sv"
-    - "kraken_imem.sv"
-    - "kraken_decode.sv"
-    - "kraken_alu.sv"
-    - "kraken_regfile.sv"
-    - "kraken_pc.sv"
-    - "kraken_pins.sv"
-    - "kraken_fifo.sv"
-    - "kraken_clkdiv.sv"
-    - "kraken_sm.sv"
-    - "kraken_pio.sv"
-    - "kraken_io.sv"
-    - "kraken_axil.sv"
-    - "kraken_sync2.sv"
-    - "kraken_serial_host.sv"
-    - "kraken_tt_host.sv"
-    - "project.v"
+    - "tt_bundle.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).

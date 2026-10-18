@@ -1,19 +1,16 @@
-// TinyTapeout pin host for one kraken_axil block.
+// TinyTapeout pad wiring for one kraken_axil block.
 //
-// ui_in[7:0]   write data
-// uio_in[0]    strobe (rising edge). Ignored while an AXI transfer is in flight.
-// uio_in[3:1]  opcode
-// uio_in[7:4]  gpio_in[3:0]
-// uo_out[7:0]  gpio_out[7:0]
-// uio_out[7:0] low byte of the last CSR read (uio_oe stays 0; the pad is an input)
+// Host link (see kraken_serial_host for the frame format):
+//   ui_in[7]     SCK
+//   uio[7]       SDIO, bidirectional
 //
-// Opcodes:
-//   1 ADDR_LO  addr[7:0]  = data, clear the write buffer
-//   2 ADDR_HI  addr[11:8] = data[3:0]
-//   3 DATA     push one little-endian byte into the write buffer (max 4)
-//   4 WRITE    AXI write of the buffer at addr & ~3, then clear the buffer
-//   5 READ     AXI read of the word at addr & ~3; uio_out becomes byte 0
-//   6 SHIFT    shift the last read word down 8 bits
+// Protocol pins, 22 in total:
+//   uio[6:0]     gpio[6:0]    bidirectional, driven with gpio_oe
+//   uo_out[7:0]  gpio[14:7]   output only
+//   ui_in[6:0]   gpio[21:15]  input only
+//
+// Output-only pads read back the level Kraken drives, so WAIT PIN and IN PINS
+// on gpio[14:7] see the driven value. gpio[31:22] is not bonded out and reads 0.
 module kraken_tt_host
   import kraken_pkg::*;
 #(
@@ -28,13 +25,6 @@ module kraken_tt_host
   output logic [7:0] uio_out,
   output logic [7:0] uio_oe
 );
-  localparam logic [2:0] OP_ADDR_LO = 3'd1;
-  localparam logic [2:0] OP_ADDR_HI = 3'd2;
-  localparam logic [2:0] OP_DATA    = 3'd3;
-  localparam logic [2:0] OP_WRITE   = 3'd4;
-  localparam logic [2:0] OP_READ    = 3'd5;
-  localparam logic [2:0] OP_SHIFT   = 3'd6;
-
   typedef enum logic [2:0] {
     ST_IDLE,
     ST_AW,
@@ -43,19 +33,19 @@ module kraken_tt_host
     ST_R
   } state_e;
 
-  logic        stb_q;
-  logic [11:0] addr;
-  logic [31:0] wbuf;
-  logic [2:0]  nbytes;
+  state_e state;
+  logic   aw_done, w_done;
+
+  logic        req_stb, req_write;
+  logic [11:0] req_addr;
+  logic [31:0] req_wdata;
   logic [31:0] rbuf;
-  state_e      state;
-  logic        aw_done;
-  logic        w_done;
+
+  logic sdio_out, sdio_oe;
 
   logic [11:0] axil_awaddr, axil_araddr;
   logic        axil_awvalid, axil_awready;
   logic [31:0] axil_wdata;
-  logic [3:0]  axil_wstrb;
   logic        axil_wvalid, axil_wready;
   logic [1:0]  axil_bresp;
   logic        axil_bvalid;
@@ -67,16 +57,32 @@ module kraken_tt_host
   gpio_t gpio_in, gpio_out, gpio_oe;
   logic  irq;
 
-  wire stb_rise = uio_in[0] & ~stb_q;
-  wire [2:0] op = uio_in[3:1];
-  wire [11:0] addr_word = {addr[11:2], 2'b00};
+  logic [6:0] uio_in_s, ui_in_s;
 
-  assign gpio_in = gpio_t'({28'b0, uio_in[7:4]});
-  assign uo_out  = ena ? gpio_out[7:0] : 8'b0;
-  assign uio_out = rbuf[7:0];
-  assign uio_oe  = 8'b0;
+  kraken_serial_host u_link (
+    .clk(clk),
+    .rst_n(rst_n),
+    .sck_pad(ui_in[7]),
+    .sdio_pad(uio_in[7]),
+    .sdio_out(sdio_out),
+    .sdio_oe(sdio_oe),
+    .req_stb(req_stb),
+    .req_write(req_write),
+    .req_addr(req_addr),
+    .req_wdata(req_wdata),
+    .rsp_data(rbuf)
+  );
 
-  wire _unused = &{axil_bresp, axil_rresp, gpio_oe, irq, 1'b0};
+  kraken_sync2 #(.W(7)) u_sync_uio (.clk(clk), .rst_n(rst_n), .d(uio_in[6:0]), .q(uio_in_s));
+  kraken_sync2 #(.W(7)) u_sync_ui  (.clk(clk), .rst_n(rst_n), .d(ui_in[6:0]),  .q(ui_in_s));
+
+  assign gpio_in = {10'b0, ui_in_s, gpio_out[14:7], uio_in_s};
+
+  assign uio_out = {sdio_out, gpio_out[6:0]};
+  assign uio_oe  = {sdio_oe, gpio_oe[6:0]};
+  assign uo_out  = ena ? gpio_out[14:7] : 8'b0;
+
+  wire _unused = &{axil_bresp, axil_rresp, gpio_oe[31:7], gpio_out[31:15], irq, 1'b0};
 
   kraken_axil #(.NUM_SM(NUM_SM)) u_kraken (
     .clk(clk),
@@ -85,7 +91,7 @@ module kraken_tt_host
     .s_axil_awvalid(axil_awvalid),
     .s_axil_awready(axil_awready),
     .s_axil_wdata(axil_wdata),
-    .s_axil_wstrb(axil_wstrb),
+    .s_axil_wstrb(4'b1111),
     .s_axil_wvalid(axil_wvalid),
     .s_axil_wready(axil_wready),
     .s_axil_bresp(axil_bresp),
@@ -104,106 +110,58 @@ module kraken_tt_host
     .irq(irq)
   );
 
-  function automatic logic [3:0] wstrb_of(input logic [2:0] n);
-    case (n)
-      3'd1: return 4'b0001;
-      3'd2: return 4'b0011;
-      3'd3: return 4'b0111;
-      3'd4: return 4'b1111;
-      default: return 4'b0000;
-    endcase
-  endfunction
-
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      stb_q         <= 1'b0;
-      addr          <= '0;
-      wbuf          <= '0;
-      nbytes        <= '0;
-      rbuf          <= '0;
-      state         <= ST_IDLE;
-      aw_done       <= 1'b0;
-      w_done        <= 1'b0;
-      axil_awaddr   <= '0;
-      axil_awvalid  <= 1'b0;
-      axil_wdata    <= '0;
-      axil_wstrb    <= '0;
-      axil_wvalid   <= 1'b0;
-      axil_araddr   <= '0;
-      axil_arvalid  <= 1'b0;
+      state        <= ST_IDLE;
+      aw_done      <= 1'b0;
+      w_done       <= 1'b0;
+      rbuf         <= '0;
+      axil_awaddr  <= '0;
+      axil_awvalid <= 1'b0;
+      axil_wdata   <= '0;
+      axil_wvalid  <= 1'b0;
+      axil_araddr  <= '0;
+      axil_arvalid <= 1'b0;
     end else begin
-      stb_q <= uio_in[0];
-
       unique case (state)
         ST_IDLE: begin
-          if (stb_rise) begin
-            unique case (op)
-              OP_ADDR_LO: begin
-                addr[7:0] <= ui_in;
-                wbuf      <= '0;
-                nbytes    <= '0;
-              end
-              OP_ADDR_HI: addr[11:8] <= ui_in[3:0];
-              OP_DATA: begin
-                if (nbytes < 3'd4) begin
-                  wbuf[8*nbytes +: 8] <= ui_in;
-                  nbytes <= nbytes + 3'd1;
-                end
-              end
-              OP_WRITE: begin
-                if (nbytes != 3'd0) begin
-                  axil_awaddr  <= addr_word;
-                  axil_wdata   <= wbuf;
-                  axil_wstrb   <= wstrb_of(nbytes);
-                  axil_awvalid <= 1'b1;
-                  axil_wvalid  <= 1'b1;
-                  aw_done      <= 1'b0;
-                  w_done       <= 1'b0;
-                  state        <= ST_AW;
-                end
-              end
-              OP_READ: begin
-                axil_araddr  <= addr_word;
-                axil_arvalid <= 1'b1;
-                state        <= ST_AR;
-              end
-              OP_SHIFT: rbuf <= {8'b0, rbuf[31:8]};
-              default: ;
-            endcase
+          if (req_stb) begin
+            if (req_write) begin
+              axil_awaddr  <= req_addr;
+              axil_wdata   <= req_wdata;
+              axil_awvalid <= 1'b1;
+              axil_wvalid  <= 1'b1;
+              aw_done      <= 1'b0;
+              w_done       <= 1'b0;
+              state        <= ST_AW;
+            end else begin
+              axil_araddr  <= req_addr;
+              axil_arvalid <= 1'b1;
+              state        <= ST_AR;
+            end
           end
         end
 
         ST_AW: begin
-          if (!aw_done) begin
-            axil_awvalid <= 1'b1;
-            if (axil_awvalid && axil_awready) begin
-              axil_awvalid <= 1'b0;
-              aw_done      <= 1'b1;
-            end
+          if (axil_awvalid && axil_awready) begin
+            axil_awvalid <= 1'b0;
+            aw_done      <= 1'b1;
           end
-          if (!w_done) begin
-            axil_wvalid <= 1'b1;
-            if (axil_wvalid && axil_wready) begin
-              axil_wvalid <= 1'b0;
-              w_done      <= 1'b1;
-            end
+          if (axil_wvalid && axil_wready) begin
+            axil_wvalid <= 1'b0;
+            w_done      <= 1'b1;
           end
           if ((aw_done || (axil_awvalid && axil_awready)) &&
               (w_done  || (axil_wvalid  && axil_wready))) begin
             state   <= ST_B;
             aw_done <= 1'b0;
             w_done  <= 1'b0;
-            wbuf    <= '0;
-            nbytes  <= '0;
           end
         end
 
-        ST_B: begin
-          if (axil_bvalid) state <= ST_IDLE;
-        end
+        ST_B: if (axil_bvalid) state <= ST_IDLE;
 
         ST_AR: begin
-          axil_arvalid <= 1'b1;
           if (axil_arvalid && axil_arready) begin
             axil_arvalid <= 1'b0;
             state        <= ST_R;

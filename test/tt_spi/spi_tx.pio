@@ -1,0 +1,19 @@
+; SPI master TX, mode 0 (CPOL 0 / CPHA 0), one bit every two SM cycles.
+;
+; MOSI is the OUT pin, SCK is the side-set pin. OUT changes MOSI while SCK is
+; low, so the data is stable for a full cycle before SCK rises and the slave
+; samples it. Bit rate is SM clock / 2, i.e. clk/2 at clkdiv 1.
+;
+; No chip select: a real target would either spend a second side-set bit on it
+; or drive it from a second state machine.
+;
+; Host config: autopull with pull_thresh 8, shift left (MSB first), so a byte
+; is pushed left-aligned as byte << 24.
+
+.program spi_tx
+.side_set 1
+
+.wrap_target
+    out pins, 1  side 0  ; MOSI changes while SCK is low
+    nop          side 1  ; SCK rises: the slave samples MOSI
+.wrap

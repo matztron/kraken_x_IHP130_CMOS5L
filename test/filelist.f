@@ -14,5 +14,7 @@ src/kraken_sm.sv
 src/kraken_pio.sv
 src/kraken_io.sv
 src/kraken_axil.sv
+src/kraken_sync2.sv
+src/kraken_serial_host.sv
 src/kraken_tt_host.sv
 src/project.v

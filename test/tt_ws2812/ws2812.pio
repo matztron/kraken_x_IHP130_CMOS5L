@@ -1,0 +1,31 @@
+; WS2812B serial LED driver — the canonical Pico program, unmodified.
+;
+; Side-set *is* the data line: the bit value selects how long the line stays
+; high. OUT only shifts into X, so out_count can be 0.
+;
+;   bit period = T1 + T2 + T3 = 10 SM cycles
+;   '1' high for T1 + T2 = 7 cycles, '0' high for T1 = 2 cycles
+;
+; At 8 MHz (clkdiv 12.5 off a 100 MHz clk) that is a 1.25 us bit with
+; T0H = 250 ns and T1H = 875 ns. The tests run at clkdiv 1 and check the
+; cycle ratios instead, so they stay independent of the chip clock.
+;
+; Host config: autopull with pull_thresh 24, shift left (MSB first), so a
+; 24-bit GRB pixel is pushed left-aligned as grb << 8.
+
+.program ws2812
+.side_set 1
+
+.define public T1 2
+.define public T2 5
+.define public T3 3
+
+.wrap_target
+bitloop:
+    out x, 1       side 0 [T3 - 1]  ; low tail of the previous bit
+    jmp !x do_zero side 1 [T1 - 1]  ; line high: every bit starts this way
+do_one:
+    jmp  bitloop   side 1 [T2 - 1]  ; stay high -> long pulse = '1'
+do_zero:
+    nop            side 0 [T2 - 1]  ; drop early -> short pulse = '0'
+.wrap

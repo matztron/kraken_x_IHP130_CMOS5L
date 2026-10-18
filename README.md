@@ -93,10 +93,14 @@ First testcases:
 - `test/clkdiv_axi/` — per-SM CLKDIV + EXEC/PIN banks (`NUM_SM=2`)
 - `test/uart_axi/` — UART TX over AXI (`pioasm` + TXF0 → gpio0 8N1)
 - `test/uart_rx_axi/` — UART RX over AXI (bit-bang gpio_in → RXF0)
-- `test/tt_top/` — TinyTapeout top (`project.v`): pin host loads `hello_world.pio` and checks gpio0
+- `test/tt_top/` — TinyTapeout top (`project.v`): 2-wire host link, program load, pad output-enable, input sync
+- `test/tt_ws2812/` — WS2812B pixels on the chip top, checked by pulse width
+- `test/tt_spi/` — SPI mode-0 master on the chip top, MOSI sampled on SCK rising edges
+- `test/tt_i2c/` — I²C master on the chip top against an open-drain bus model with an ACKing slave
 
 ## Documentation pointers
 
+- **TinyTapeout pin map + host link:** [`docs/tt_host_link.md`](docs/tt_host_link.md)
 - **System architecture (SoC integration):** [`system_arch.md`](system_arch.md)
 - **Support matrix (what works / what’s missing):** [`kraken_support.md`](kraken_support.md)
 - Spec (encodings & target behavior): [`pio_derived_spec.md`](pio_derived_spec.md)

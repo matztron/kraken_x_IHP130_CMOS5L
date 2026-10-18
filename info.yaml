@@ -30,42 +30,43 @@ project:
     - "kraken_pio.sv"
     - "kraken_io.sv"
     - "kraken_axil.sv"
+    - "kraken_sync2.sv"
+    - "kraken_serial_host.sv"
     - "kraken_tt_host.sv"
     - "project.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
-  # Inputs — host write-data byte
-  ui[0]: "host_d0"
-  ui[1]: "host_d1"
-  ui[2]: "host_d2"
-  ui[3]: "host_d3"
-  ui[4]: "host_d4"
-  ui[5]: "host_d5"
-  ui[6]: "host_d6"
-  ui[7]: "host_d7"
+  # Inputs — gpio[21:15] input only, plus the host clock
+  ui[0]: "gpio15"
+  ui[1]: "gpio16"
+  ui[2]: "gpio17"
+  ui[3]: "gpio18"
+  ui[4]: "gpio19"
+  ui[5]: "gpio20"
+  ui[6]: "gpio21"
+  ui[7]: "host SCK"
 
-  # Outputs — PIO gpio_out[7:0]
-  uo[0]: "gpio0"
-  uo[1]: "gpio1"
-  uo[2]: "gpio2"
-  uo[3]: "gpio3"
-  uo[4]: "gpio4"
-  uo[5]: "gpio5"
-  uo[6]: "gpio6"
-  uo[7]: "gpio7"
+  # Outputs — gpio[14:7] output only
+  uo[0]: "gpio7"
+  uo[1]: "gpio8"
+  uo[2]: "gpio9"
+  uo[3]: "gpio10"
+  uo[4]: "gpio11"
+  uo[5]: "gpio12"
+  uo[6]: "gpio13"
+  uo[7]: "gpio14"
 
-  # Bidirectional pins. oe is 0: strobe/opcode/gpio_in are inputs.
-  # uio_out carries the CSR read byte for simulation; it is not driven on the pad.
-  uio[0]: "host_stb"
-  uio[1]: "host_op0"
-  uio[2]: "host_op1"
-  uio[3]: "host_op2"
-  uio[4]: "gpio_in0"
-  uio[5]: "gpio_in1"
-  uio[6]: "gpio_in2"
-  uio[7]: "gpio_in3"
+  # Bidirectional — gpio[6:0] driven with gpio_oe, plus the host data line
+  uio[0]: "gpio0"
+  uio[1]: "gpio1"
+  uio[2]: "gpio2"
+  uio[3]: "gpio3"
+  uio[4]: "gpio4"
+  uio[5]: "gpio5"
+  uio[6]: "gpio6"
+  uio[7]: "host SDIO"
 
 # Do not change!
 yaml_version: 6

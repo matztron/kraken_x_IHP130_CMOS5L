@@ -157,7 +157,7 @@ Re-synth after each block; cut packet RAM or SM features before cutting UART dem
 
 | Tier | Content |
 | --- | --- |
-| **Must** | 2 SMs; pioasm subset; AXI-Lite host (WB if TT requires); UART + WS2812 + I2C + SPI demos; FIFO depth 16; shared 256×16 IMEM; cocotb + FPGA |
-| **Should** | 1 KB packet SRAM; DMA; pinmux + input sync; bit-serial IMEM load for TT |
+| **Must** | 2 SMs; pioasm subset; AXI-Lite host (WB if TT requires); UART + WS2812 + I2C + SPI demos ✅; FIFO depth 16; shared 256×16 IMEM; cocotb + FPGA |
+| **Should** | 1 KB packet SRAM; DMA; pinmux + input sync ✅; bit-serial IMEM load for TT ✅ |
 | **Stretch** | MII @ 10 Mbps Ethernet frames; HW CRC32 sidecar; 4th SM if area allows |
 | **Non-goals** | RGMII/GbE; HDMI; hardwired full MAC; RMII unless pads force it; large new ISA |

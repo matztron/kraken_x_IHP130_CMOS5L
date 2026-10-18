@@ -22,7 +22,7 @@ Kraken aims for **`pioasm` instruction-binary compatibility** for supported feat
 
 **Default build:** 1 SM, 32×16 IMEM, 32-bit datapath, 4+4 FIFOs (+ always-present join-8 storage). Flat ports on `kraken_io`; AXI-Lite host on `kraken_axil` (see [`docs/axil_csr_map.md`](docs/axil_csr_map.md)).
 
-**Verified in sim:** `test/hello_world`, `test/isa_basic`, `test/features`, `test/axi_lite`, `test/clkdiv_axi`, `test/uart_axi`, `test/uart_rx_axi`.
+**Verified in sim:** `test/hello_world`, `test/isa_basic`, `test/features`, `test/axi_lite`, `test/clkdiv_axi`, `test/uart_axi`, `test/uart_rx_axi`, and on the TinyTapeout top `test/tt_top`, `test/tt_ws2812`, `test/tt_spi`, `test/tt_i2c`.
 
 ---
 
@@ -78,6 +78,17 @@ Examples that fit the current engine:
 - FIFO-fed serializers / deserializers with PULL/PUSH or autopush/pull
 - Multi-SM demos with shared IMEM (same program/config) and separate FIFOs
 
+Running today on the TinyTapeout top, programmed over the 2-wire host link:
+
+| Demo | Program | Exercises |
+| --- | --- | --- |
+| WS2812B | `test/tt_ws2812/ws2812.pio` (4 instr, canonical Pico source) | side-set as the data line, autopull at a 24-bit threshold |
+| SPI mode 0 | `test/tt_spi/spi_tx.pio` (2 instr) | OUT PINS plus side-set clock at clk/2, autopull at 8 bits |
+| I²C write | `test/tt_i2c/i2c_min.pio` (15 instr) | open-drain via pindirs, side-set to PINDIRS, `IN PINS` for the ACK |
+
+The I²C demo is a START / one byte / ACK / STOP master with no clock stretching,
+repeated START, or multi-byte transfer — those need more than 32 instructions.
+
 ---
 
 ## 3. Missing or incomplete vs full Pi PIO
@@ -111,7 +122,7 @@ Legend: **Missing** = not in RTL · **Stub** = port/hook only · **Partial** = p
 | Pi feature | Kraken | Gap |
 | --- | --- | --- |
 | Per-GPIO `GPIO_CTRL` → which PIO SM | Missing | OR / priority merge of SM out/oe vectors |
-| Input synchronizers + bypass | Missing | Raw `gpio_in` |
+| Input synchronizers + bypass | Partial | 2FF sync in `kraken_tt_host` (`kraken_sync2`); no bypass, and `kraken_io` itself still takes raw `gpio_in` |
 | Pad OE ownership vs CPU | N/A | Outside PIO IP |
 | RP2040 30 vs our `GPIO_W=32` | Partial | Width OK; mux model differs |
 
@@ -167,7 +178,9 @@ Aligned with [`pio_derived_spec.md`](pio_derived_spec.md) §13, updated to reali
 | 1b | Practical protocol tests (UART TX/RX, etc.) | **Done** (UART TX + RX over AXI) |
 | 2 | FJOIN, STATUS, rel IRQ, multi-SM FIFOs | **Done** (IRQ rel + FJOIN + STATUS) |
 | 2b | AXI-Lite CSR host, Pico 16.8 clkdiv | **Done** (`kraken_axil`, per-SM clkdiv) |
-| 2c | Per-SM config banks, host `SM_INSTR`, input sync | **Partial** (`SM_INSTR`/`SM_ADDR`/`SM_RESTART` done; input sync still missing) |
+| 2c | Per-SM config banks, host `SM_INSTR`, input sync | **Done** (`SM_INSTR`/`SM_ADDR`/`SM_RESTART`; 2FF input sync at the TT top) |
+| 2e | TT pad integration: 2-wire host link, 22 protocol pins, `gpio_oe` on pads | **Done** (see [`tt_host_link.md`](tt_host_link.md)) |
+| 2f | WS2812 / SPI / I²C demos on the chip top | **Done** |
 | 2d | FSTAT/FDEBUG completeness, IRQ to NVIC-style | **Partial** (FSTAT + FDEBUG + FLEVEL; IRQ still simple) |
 | 3 | Multi-block, GPIOCTRL-style mux, RP2350 opts | **Missing / optional** |
 

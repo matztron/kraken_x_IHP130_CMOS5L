@@ -1,0 +1,38 @@
+; Minimal I2C master: START, one byte, ACK sample, STOP.
+;
+; SDA = gpio0 (OUT / IN / SET base), SCL = gpio1 (side-set, pindirs).
+;
+; Both wires are open drain. The driven level stays 0, so a pindir of 1 pulls
+; the wire down and a pindir of 0 releases it to the external pull-up. That is
+; the whole point of this demo: it only works if gpio_oe reaches the pad.
+;
+; Because OUT drives SDA's *pindir*, the data byte has to be inverted before it
+; is pushed: a 1 bit must release the wire. SET_COUNT is 2 so `set pins, 0`
+; clears both driven levels; the SET also touches SCL's pindir, but side-set
+; writes the same field later in the cycle and wins, so SCL stays side-set's.
+;
+; This is deliberately not a general-purpose I2C master: no clock stretching,
+; no repeated START, no multi-byte transfers, no bus arbitration. Those need
+; more than the 32 instructions available today.
+
+.program i2c_min
+.side_set 1 pindirs
+
+    set pins, 0      side 0       ; open drain: the driven level is always 0
+.wrap_target
+    pull             side 0       ; wait for a byte; both wires idle high
+    set pindirs, 1   side 0 [7]   ; START: SDA low while SCL is still high
+    nop              side 1 [7]   ; SCL low
+    set x, 7         side 1
+bitloop:
+    out pindirs, 1   side 1 [3]   ; SDA changes while SCL is low
+    nop              side 0 [3]   ; SCL high: the slave samples SDA
+    jmp x-- bitloop  side 1 [3]   ; SCL low again
+    set pindirs, 0   side 1 [3]   ; release SDA for the ACK bit
+    nop              side 0 [3]   ; SCL high
+    in pins, 1       side 0       ; sample SDA: 0 means the slave acked
+    push             side 1 [3]   ; hand the ACK bit to the host, SCL low
+    set pindirs, 1   side 1 [7]   ; STOP: hold SDA low ...
+    nop              side 0 [7]   ; ... release SCL ...
+    set pindirs, 0   side 0 [7]   ; ... then release SDA
+.wrap

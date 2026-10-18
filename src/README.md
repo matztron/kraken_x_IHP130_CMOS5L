@@ -17,7 +17,9 @@ Single-cycle-style PIO state machine. Shared constants live in `kraken_pkg.sv`.
 | `kraken_pio.sv` | IMEM + SMs |
 | `kraken_io.sv` | Flat-port top |
 | `kraken_axil.sv` | AXI4-Lite CSR host + per-SM clkdiv |
-| `kraken_tt_host.sv` | TinyTapeout pin host around `kraken_axil` |
+| `kraken_sync2.sv` | Two-flop synchroniser for pad inputs |
+| `kraken_serial_host.sv` | Synchronous 2-wire host link (SCK + SDIO) |
+| `kraken_tt_host.sv` | TinyTapeout pad wiring around `kraken_axil` |
 | `project.v` | Tapeout top `tt_um_kraken_x_protocol_emulator` |
 
 Phase-1 ISA: `JMP`, `WAIT`, `IN`, `OUT`, `PUSH`/`PULL`, `MOV`, `IRQ`, `SET` (+ delay/wrap).
